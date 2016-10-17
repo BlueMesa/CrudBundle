@@ -149,7 +149,7 @@ class CrudHandler
             $view = View::create(array('entities' => $entities));
         }
 
-        $event = new IndexActionEvent($request, $repository, $entities);
+        $event = new IndexActionEvent($request, $repository, $entities, $view);
         $this->dispatcher->dispatch(CrudControllerEvents::INDEX_COMPLETED, $event);
 
         /** @var View $view */

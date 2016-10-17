@@ -28,7 +28,7 @@ class NewActionEvent extends EntityModificationEvent
      * @param Form $form
      * @param View $view
      */
-    public function __construct(Request $request, EntityInterface $entity = null, Form $form = null)
+    public function __construct(Request $request, EntityInterface $entity = null, Form $form = null, View $view = null)
     {
         $this->request = $request;
         $this->entity = $entity;

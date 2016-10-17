@@ -14,6 +14,7 @@ namespace Bluemesa\Bundle\CrudBundle\Event;
 
 
 use Bluemesa\Bundle\CoreBundle\Entity\EntityInterface;
+use FOS\RestBundle\View\View;
 use Symfony\Component\Form\Form;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -25,10 +26,12 @@ class ShowActionEvent extends EntityEvent
      * @param Request $request
      * @param EntityInterface $entity
      * @param Form $form
+     * @param View $view
      */
-    public function __construct(Request $request, EntityInterface $entity)
+    public function __construct(Request $request, EntityInterface $entity, View $view = null)
     {
         $this->request = $request;
         $this->entity = $entity;
+        $this->view = $view;
     }
 }

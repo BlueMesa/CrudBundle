@@ -14,7 +14,7 @@ namespace Bluemesa\Bundle\CrudBundle\Controller\Annotations;
 
 
 /**
- * Paginated Annotation
+ * Paginate Annotation
  *
  * @Annotation
  * @Target("METHOD")

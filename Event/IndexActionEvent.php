@@ -15,6 +15,7 @@ namespace Bluemesa\Bundle\CrudBundle\Event;
 
 use Doctrine\Common\Persistence\ObjectRepository;
 use Doctrine\ORM\EntityRepository;
+use FOS\RestBundle\View\View;
 use Symfony\Component\HttpFoundation\Request;
 
 class IndexActionEvent extends CrudEvent
@@ -36,13 +37,15 @@ class IndexActionEvent extends CrudEvent
      * @param Request                $request
      * @param ObjectRepository|null  $repository
      * @param array|null             $entities
+     * @param View                   $view
      */
     public function __construct(Request $request, ObjectRepository $repository = null,
-                                $entities = null)
+                                $entities = null, View $view = null)
     {
         $this->request = $request;
         $this->repository = $repository;
         $this->entities = $entities;
+        $this->view = $view;
     }
 
     /**

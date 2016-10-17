@@ -28,10 +28,11 @@ class EditActionEvent extends EntityModificationEvent
      * @param Form $form
      * @param View $view
      */
-    public function __construct(Request $request, EntityInterface $entity, Form $form)
+    public function __construct(Request $request, EntityInterface $entity, Form $form, View $view = null)
     {
         $this->request = $request;
         $this->entity = $entity;
         $this->form = $form;
+        $this->view = $view;
     }
 }

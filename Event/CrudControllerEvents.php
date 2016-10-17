@@ -33,7 +33,7 @@ final class CrudControllerEvents
     /**
      * @Event
      */
-    const INDEX_COMPLETED = 'bluemesa.controller.index_view';
+    const INDEX_COMPLETED = 'bluemesa.controller.index_completed';
 
 
     /**

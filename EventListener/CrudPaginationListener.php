@@ -12,6 +12,7 @@
 
 namespace Bluemesa\Bundle\CrudBundle\EventListener;
 
+use Bluemesa\Bundle\CoreBundle\Repository\EntityRepositoryInterface;
 use Bluemesa\Bundle\CrudBundle\Controller\Annotations\Paginate;
 use Bluemesa\Bundle\CrudBundle\Event\IndexActionEvent;
 use Doctrine\Common\Annotations\Reader;
@@ -21,7 +22,7 @@ use Symfony\Component\HttpFoundation\Request;
 
 
 /**
- * The CrudAnnotationListener handles CRUD annotations for controllers.
+ * The CrudAnnotationListener handles Pagination annotation for controllers.
  *
  * @DI\Service("bluemesa.crud.listener.pagination")
  * @DI\Tag("kernel.event_listener",
@@ -74,22 +75,24 @@ class CrudPaginationListener
         } elseif (is_object($controller) && is_callable($controller, '__invoke')) {
             $m = new \ReflectionMethod($controller, '__invoke');
         } else {
-            return false;
+            return;
         }
 
         /** @var Paginate $paginateAnnotation */
         $paginateAnnotation = $this->reader->getMethodAnnotation($m, Paginate::class);
         if (! $paginateAnnotation) {
-            return false;
+            return;
         }
         $maxResults = $paginateAnnotation->getMaxResults();
 
         $page = $request->get('page', 1);
         $repository = $event->getRepository();
-        $count = $repository->getListCount();
-        $query = $repository->getListQuery()->setHint('knp_paginator.count', $count);
+        if ($repository instanceof EntityRepositoryInterface) {
+            $count = $repository->getIndexCount();
+            $query = $repository->createIndexQuery()->setHint('knp_paginator.count', $count);
         $entities = $this->paginator->paginate($query, $page, $maxResults, array('distinct' => false));
         $event->setEntities($entities);
+    }
     }
 
     /**
