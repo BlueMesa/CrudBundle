@@ -16,9 +16,12 @@ use Bluemesa\Bundle\AclBundle\Filter\SecureFilterInterface;
 use Bluemesa\Bundle\CoreBundle\Repository\FilteredRepositoryInterface;
 use Bluemesa\Bundle\CrudBundle\Controller\Annotations\Filter;
 use Bluemesa\Bundle\CrudBundle\Event\IndexActionEvent;
+use Bluemesa\Bundle\CrudBundle\Filter\RedirectFilterInterface;
 use Doctrine\Common\Annotations\Reader;
+use FOS\RestBundle\View\View;
 use JMS\DiExtraBundle\Annotation as DI;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
@@ -31,7 +34,7 @@ use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
  *     attributes = {
  *         "event" = "bluemesa.controller.index_initialize",
  *         "method" = "onIndexInitialize",
- *         "priority" = 100
+ *         "priority" = 900
  *     }
  * )
  * @DI\Tag("kernel.event_listener",
@@ -106,6 +109,7 @@ class CrudFilterListener
             return;
         }
         $filterClass = $filterAnnotation->getName();
+        $redirectRoute = $filterAnnotation->getRedirectRoute();
 
         $repository = $event->getRepository();
         if ($repository instanceof FilteredRepositoryInterface) {
@@ -114,6 +118,15 @@ class CrudFilterListener
             } else {
                 $filter = new $filterClass($request);
             }
+
+            /* Redirect to route that handles submitted filter parameters if needed */
+            if (($filter instanceof RedirectFilterInterface)&&(!empty($redirectRoute))&&($filter->needRedirect())) {
+                $event->setView(
+                    View::createRouteRedirect($redirectRoute, $filter->getParameters(), Response::HTTP_FOUND));
+
+                return;
+            }
+
             $repository->setFilter($filter);
             $this->addRequestAttribute($request, 'filter', $filter);
         }

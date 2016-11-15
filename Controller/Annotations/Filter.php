@@ -29,6 +29,11 @@ class Filter
     public $name;
 
     /**
+     * @var string
+     */
+    public $redirectRoute;
+
+    /**
      * @return string
      */
     public function getName()
@@ -42,5 +47,21 @@ class Filter
     public function setName($name)
     {
         $this->name = $name;
+    }
+
+    /**
+     * @return string
+     */
+    public function getRedirectRoute()
+    {
+        return $this->redirectRoute;
+    }
+
+    /**
+     * @param string $redirectRoute
+     */
+    public function setRedirectRoute($redirectRoute)
+    {
+        $this->redirectRoute = $redirectRoute;
     }
 }

@@ -29,7 +29,7 @@ use Symfony\Component\HttpFoundation\Request;
  *     attributes = {
  *         "event" = "bluemesa.controller.index_initialize",
  *         "method" = "onIndexInitialize",
- *         "priority" = 900
+ *         "priority" = 100
  *     }
  * )
  *
