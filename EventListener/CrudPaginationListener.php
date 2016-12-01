@@ -52,12 +52,11 @@ class CrudPaginationListener
      *
      * @DI\InjectParams({
      *     "reader" = @DI\Inject("annotation_reader"),
-     *     "paginator" = @DI\Inject("knp_paginator")
+     *     "paginator" = @DI\Inject("knp_paginator"),
      * })
      *
-     * @param Reader $reader
-     * @param PaginatorInterface $paginator
-     * @throws \Exception
+     * @param  Reader              $reader
+     * @param  PaginatorInterface  $paginator
      */
     public function __construct(Reader $reader, PaginatorInterface $paginator)
     {
@@ -65,6 +64,9 @@ class CrudPaginationListener
         $this->paginator = $paginator;
     }
 
+    /**
+     * @param IndexActionEvent $event
+     */
     public function onIndexInitialize(IndexActionEvent $event)
     {
         $request = $event->getRequest();
@@ -83,16 +85,22 @@ class CrudPaginationListener
         if (! $paginateAnnotation) {
             return;
         }
-        $maxResults = $paginateAnnotation->getMaxResults();
 
+        $maxResults = $paginateAnnotation->getMaxResults();
         $page = $request->get('page', 1);
         $repository = $event->getRepository();
+
         if ($repository instanceof EntityRepositoryInterface) {
             $count = $repository->getIndexCount();
             $query = $repository->createIndexQuery()->setHint('knp_paginator.count', $count);
-        $entities = $this->paginator->paginate($query, $page, $maxResults, array('distinct' => false));
+            $options = array('distinct' => false);
+        } else {
+            $query = $repository->findAll();
+            $options = array();
+        }
+
+        $entities = $this->paginator->paginate($query, $page, $maxResults, $options);
         $event->setEntities($entities);
-    }
     }
 
     /**

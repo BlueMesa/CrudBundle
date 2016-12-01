@@ -61,7 +61,7 @@ class CrudHandler
 
 
     /**
-     * EntityHandler constructor.
+     * CrudHandler constructor.
      *
      * @DI\InjectParams({
      *     "dispatcher" = @DI\Inject("event_dispatcher"),

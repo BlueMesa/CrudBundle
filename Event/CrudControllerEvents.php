@@ -13,8 +13,6 @@
 namespace Bluemesa\Bundle\CrudBundle\Event;
 
 
-use Symfony\Component\Form\FormEvents;
-
 final class CrudControllerEvents
 {
     /**

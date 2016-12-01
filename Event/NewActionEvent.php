@@ -15,7 +15,7 @@ namespace Bluemesa\Bundle\CrudBundle\Event;
 
 use Bluemesa\Bundle\CoreBundle\Entity\EntityInterface;
 use FOS\RestBundle\View\View;
-use Symfony\Component\Form\Form;
+use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Request;
 
 class NewActionEvent extends EntityModificationEvent
@@ -25,10 +25,10 @@ class NewActionEvent extends EntityModificationEvent
      *
      * @param Request $request
      * @param EntityInterface $entity
-     * @param Form $form
+     * @param FormInterface $form
      * @param View $view
      */
-    public function __construct(Request $request, EntityInterface $entity = null, Form $form = null, View $view = null)
+    public function __construct(Request $request, EntityInterface $entity = null, FormInterface $form = null, View $view = null)
     {
         $this->request = $request;
         $this->entity = $entity;
