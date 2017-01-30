@@ -13,12 +13,13 @@
 namespace Bluemesa\Bundle\CrudBundle\Event;
 
 
+use Bluemesa\Bundle\CoreBundle\Event\EntityEventInterface;
 use Doctrine\Common\Persistence\ObjectRepository;
 use Doctrine\ORM\EntityRepository;
 use FOS\RestBundle\View\View;
 use Symfony\Component\HttpFoundation\Request;
 
-class IndexActionEvent extends CrudEvent
+class IndexActionEvent extends CrudEvent implements EntityEventInterface
 {
     /**
      * @var EntityRepository
@@ -65,7 +66,7 @@ class IndexActionEvent extends CrudEvent
     }
 
     /**
-     * @return mixed
+     * {@inheritdoc)
      */
     public function getEntities()
     {
@@ -73,7 +74,7 @@ class IndexActionEvent extends CrudEvent
     }
 
     /**
-     * @param mixed $entities
+     * {@inheritdoc)
      */
     public function setEntities($entities)
     {

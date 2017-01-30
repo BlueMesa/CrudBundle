@@ -13,44 +13,10 @@
 namespace Bluemesa\Bundle\CrudBundle\Event;
 
 
+use Bluemesa\Bundle\CoreBundle\Event\ControllerEvent;
 use FOS\RestBundle\View\View;
-use Symfony\Component\EventDispatcher\Event;
 use Symfony\Component\HttpFoundation\Request;
 
-class CrudEvent extends Event
+class CrudEvent extends ControllerEvent
 {
-    /**
-     * @var Request
-     */
-    protected $request;
-
-    /**
-     * @var View
-     */
-    protected $view;
-
-
-    /**
-     * @return Request
-     */
-    public function getRequest()
-    {
-        return $this->request;
-    }
-
-    /**
-     * @return View
-     */
-    public function getView()
-    {
-        return $this->view;
-    }
-
-    /**
-     * @param View $view
-     */
-    public function setView($view)
-    {
-        $this->view = $view;
-    }
 }
