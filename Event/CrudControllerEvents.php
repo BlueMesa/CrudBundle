@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the XXX.
+ * This file is part of the CRUD Bundle.
  * 
  * Copyright (c) 2016 BlueMesa LabDB Contributors <labdb@bluemesa.eu>
  * 
@@ -42,6 +42,11 @@ final class CrudControllerEvents
     /**
      * @Event
      */
+    const NEW_SUBMITTED = 'bluemesa.controller.new_submitted';
+
+    /**
+     * @Event
+     */
     const NEW_SUCCESS = 'bluemesa.controller.new_success';
 
     /**
@@ -69,6 +74,11 @@ final class CrudControllerEvents
     /**
      * @Event
      */
+    const EDIT_SUBMITTED = 'bluemesa.controller.edit_submitted';
+
+    /**
+     * @Event
+     */
     const EDIT_SUCCESS = 'bluemesa.controller.edit_success';
 
     /**
@@ -81,6 +91,11 @@ final class CrudControllerEvents
      * @Event
      */
     const DELETE_INITIALIZE = 'bluemesa.controller.delete_initialize';
+
+    /**
+     * @Event
+     */
+    const DELETE_SUBMITTED = 'bluemesa.controller.delete_submitted';
 
     /**
      * @Event

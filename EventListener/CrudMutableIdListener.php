@@ -28,15 +28,15 @@ use JMS\DiExtraBundle\Annotation as DI;
  * @DI\Service("bluemesa.crud.listener.mutable_id")
  * @DI\Tag("kernel.event_listener",
  *     attributes = {
- *         "event" = "bluemesa.controller.edit_success",
- *         "method" = "onEditSuccess",
+ *         "event" = "bluemesa.controller.edit_submitted",
+ *         "method" = "onEditSubmitted",
  *         "priority" = 1000
  *     }
  * )
  * @DI\Tag("kernel.event_listener",
  *     attributes = {
- *         "event" = "bluemesa.controller.new_success",
- *         "method" = "onNewSuccess",
+ *         "event" = "bluemesa.controller.new_submitted",
+ *         "method" = "onNewSubmitted",
  *         "priority" = 1000
  *     }
  * )
@@ -68,7 +68,7 @@ class CrudMutableIdListener
     /**
      * @param EditActionEvent $event
      */
-    public function onEditSuccess(EditActionEvent $event)
+    public function onEditSubmitted(EditActionEvent $event)
     {
         $request = $event->getRequest();
         $entity = $event->getEntity();
@@ -87,7 +87,7 @@ class CrudMutableIdListener
     /**
      * @param NewActionEvent $event
      */
-    public function onNewSuccess(NewActionEvent $event)
+    public function onNewSubmitted(NewActionEvent $event)
     {
         $entity = $event->getEntity();
 

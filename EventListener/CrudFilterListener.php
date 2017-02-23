@@ -77,7 +77,6 @@ class CrudFilterListener
      * @param Reader $reader
      * @param AuthorizationCheckerInterface $authorizationChecker
      * @param TokenStorageInterface $tokenStorage
-     * @throws \Exception
      */
     public function __construct(Reader $reader, AuthorizationCheckerInterface $authorizationChecker,
                                 TokenStorageInterface $tokenStorage)

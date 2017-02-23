@@ -24,7 +24,7 @@ use Bluemesa\Bundle\CrudBundle\Event\ShowActionEvent;
 use FOS\RestBundle\View\View;
 use JMS\DiExtraBundle\Annotation as DI;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-use Symfony\Component\Form\Form;
+use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\RouterInterface;
@@ -156,8 +156,7 @@ class CrudHandler
         $event = new IndexActionEvent($request, $repository, $entities, $view);
         $this->dispatcher->dispatch(CrudControllerEvents::INDEX_COMPLETED, $event);
 
-        /** @var View $view */
-        return $view;
+        return $event->getView();
     }
 
     /**
@@ -187,25 +186,28 @@ class CrudHandler
 
         if ($form->isSubmitted() && $form->isValid()) {
             $event = new NewActionEvent($request, $entity, $form);
-            $this->dispatcher->dispatch(CrudControllerEvents::NEW_SUCCESS, $event);
+            $this->dispatcher->dispatch(CrudControllerEvents::NEW_SUBMITTED, $event);
 
             $em = $this->registry->getManagerForClass(get_class($entity));
             $em->persist($entity);
             $em->flush();
+
+            $event = new NewActionEvent($request, $entity, $form, $event->getView());
+            $this->dispatcher->dispatch(CrudControllerEvents::NEW_SUCCESS, $event);
 
             if (null === $view = $event->getView()) {
                 $route = $request->get('edit_redirect_route');
                 $view = View::createRouteRedirect($route, array('id' => $entity->getId()));
             }
 
-            $event = new NewActionEvent($request, $entity, $form);
-            $this->dispatcher->dispatch(CrudControllerEvents::NEW_COMPLETED, $event);
-
-            /** @var View $view */
-            return $view;
+        } else {
+            $view = View::create(array('entity' => $entity, 'form' => $form->createView()));
         }
 
-        return View::create(array('entity' => $entity, 'form' => $form->createView()));
+        $event = new NewActionEvent($request, $entity, $form, $view);
+        $this->dispatcher->dispatch(CrudControllerEvents::NEW_COMPLETED, $event);
+
+        return $event->getView();
     }
 
     /**
@@ -227,11 +229,10 @@ class CrudHandler
             $view = View::create(array('entity' => $entity, 'delete_form' => $deleteForm->createView()));
         }
 
-        $event = new ShowActionEvent($request, $entity);
+        $event = new ShowActionEvent($request, $entity, $view);
         $this->dispatcher->dispatch(CrudControllerEvents::SHOW_COMPLETED, $event);
 
-        /** @var View $view */
-        return $view;
+        return $event->getView();
     }
 
     /**
@@ -260,28 +261,29 @@ class CrudHandler
 
         if ($form->isSubmitted() && $form->isValid()) {
             $event = new EditActionEvent($request, $entity, $form);
-            $this->dispatcher->dispatch(CrudControllerEvents::EDIT_SUCCESS, $event);
+            $this->dispatcher->dispatch(CrudControllerEvents::EDIT_SUBMITTED, $event);
 
             $em = $this->registry->getManagerForClass(get_class($entity));
             $em->persist($entity);
             $em->flush();
+
+            $event = new EditActionEvent($request, $entity, $form, $event->getView());
+            $this->dispatcher->dispatch(CrudControllerEvents::EDIT_SUCCESS, $event);
 
             if (null === $view = $event->getView()) {
                 $route = $request->get('edit_redirect_route');
                 $view = View::createRouteRedirect($route, array('id' => $entity->getId()));
             }
 
-            $event = new EditActionEvent($request, $entity, $form);
-            $this->dispatcher->dispatch(CrudControllerEvents::EDIT_COMPLETED, $event);
-
-            /** @var View $view */
-            return $view;
+        } else {
+            $view = View::create(array('entity' => $entity, 'form' => $form->createView(),
+                'delete_form' => $deleteForm->createView()));
         }
 
-        return View::create(array(
-            'entity' => $entity,
-            'form' => $form->createView(),
-            'delete_form' => $deleteForm->createView()));
+        $event = new EditActionEvent($request, $entity, $form, $view);
+        $this->dispatcher->dispatch(CrudControllerEvents::EDIT_COMPLETED, $event);
+
+        return $event->getView();
     }
 
 
@@ -309,27 +311,28 @@ class CrudHandler
 
         if ($form->isSubmitted() && $form->isValid()) {
             $event = new DeleteActionEvent($request, $entity, $form);
-            $this->dispatcher->dispatch(CrudControllerEvents::DELETE_SUCCESS, $event);
+            $this->dispatcher->dispatch(CrudControllerEvents::DELETE_SUBMITTED, $event);
 
             $em = $this->registry->getManagerForClass(get_class($entity));
             $em->remove($entity);
             $em->flush();
+
+            $event = new DeleteActionEvent($request, $entity, $form);
+            $this->dispatcher->dispatch(CrudControllerEvents::DELETE_SUCCESS, $event);
 
             if (null === $view = $event->getView()) {
                 $route = $request->get('delete_redirect_route');
                 $view = View::createRouteRedirect($route);
             }
 
-            $event = new DeleteActionEvent($request, $entity, $form);
-            $this->dispatcher->dispatch(CrudControllerEvents::DELETE_COMPLETED, $event);
-
-            /** @var View $view */
-            return $view;
+        } else {
+            $view = View::create(array('entity' => $entity, 'form' => $form->createView()));
         }
 
-        return View::create(array(
-            'entity' => $entity,
-            'form' => $form->createView()));
+        $event = new DeleteActionEvent($request, $entity, $form, $view);
+        $this->dispatcher->dispatch(CrudControllerEvents::DELETE_COMPLETED, $event);
+
+        return $event->getView();
     }
 
     /**
@@ -337,7 +340,7 @@ class CrudHandler
      *
      * @param Request $request
      *
-     * @return Form
+     * @return FormInterface
      */
     private function createDeleteForm(Request $request)
     {

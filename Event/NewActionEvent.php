@@ -33,5 +33,6 @@ class NewActionEvent extends EntityModificationEvent
         $this->request = $request;
         $this->entity = $entity;
         $this->form = $form;
+        $this->view = $view;
     }
 }
