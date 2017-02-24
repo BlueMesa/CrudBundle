@@ -14,6 +14,7 @@ namespace Bluemesa\Bundle\CrudBundle\EventListener;
 
 use Bluemesa\Bundle\CoreBundle\Entity\MutableIdEntityInterface;
 use Bluemesa\Bundle\CrudBundle\Event\EditActionEvent;
+use Bluemesa\Bundle\CrudBundle\Event\EntityModificationEvent;
 use Bluemesa\Bundle\CrudBundle\Event\NewActionEvent;
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\EntityManagerInterface;
@@ -29,14 +30,14 @@ use JMS\DiExtraBundle\Annotation as DI;
  * @DI\Tag("kernel.event_listener",
  *     attributes = {
  *         "event" = "bluemesa.controller.edit_submitted",
- *         "method" = "onEditSubmitted",
+ *         "method" = "onMutableId",
  *         "priority" = 1000
  *     }
  * )
  * @DI\Tag("kernel.event_listener",
  *     attributes = {
  *         "event" = "bluemesa.controller.new_submitted",
- *         "method" = "onNewSubmitted",
+ *         "method" = "onMutableId",
  *         "priority" = 1000
  *     }
  * )
@@ -66,39 +67,26 @@ class CrudMutableIdListener
 
 
     /**
-     * @param EditActionEvent $event
+     * @param EntityModificationEvent $event
      */
-    public function onEditSubmitted(EditActionEvent $event)
+    public function onMutableId(EntityModificationEvent $event)
     {
         $request = $event->getRequest();
         $entity = $event->getEntity();
 
-        // Check if ID of the entity has been modified and temporarily disable ID generator
-        if (($entity instanceof MutableIdEntityInterface)&&($request->get('id') != $entity->getId())) {
-            $em = $this->doctrine->getManagerForClass(get_class($entity));
-            if ($em instanceof EntityManagerInterface) {
-                $metadata = $em->getClassMetadata(get_class($entity));
-                $metadata->setIdGeneratorType(ClassMetadata::GENERATOR_TYPE_NONE);
-                $metadata->setIdGenerator(new AssignedGenerator());
-            }
+        // Check if ID of the entity has been specified or modified
+        if ((! $entity instanceof MutableIdEntityInterface)||($entity->getId() == null)||
+            ($request->get('id') == $entity->getId())) {
+
+            return;
         }
-    }
 
-    /**
-     * @param NewActionEvent $event
-     */
-    public function onNewSubmitted(NewActionEvent $event)
-    {
-        $entity = $event->getEntity();
-
-        // Check if ID of the entity has been specified and temporarily disable ID generator
-        if (($entity instanceof MutableIdEntityInterface)&&($entity->getId() != null)) {
-            $em = $this->doctrine->getManagerForClass(get_class($entity));
-            if ($em instanceof EntityManagerInterface) {
-                $metadata = $em->getClassMetadata(get_class($entity));
-                $metadata->setIdGeneratorType(ClassMetadata::GENERATOR_TYPE_NONE);
-                $metadata->setIdGenerator(new AssignedGenerator());
-            }
+        // Temporarily disable ID generator
+        $em = $this->doctrine->getManagerForClass(get_class($entity));
+        if ($em instanceof EntityManagerInterface) {
+            $metadata = $em->getClassMetadata(get_class($entity));
+            $metadata->setIdGeneratorType(ClassMetadata::GENERATOR_TYPE_NONE);
+            $metadata->setIdGenerator(new AssignedGenerator());
         }
     }
 }
