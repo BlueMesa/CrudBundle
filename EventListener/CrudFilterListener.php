@@ -15,11 +15,13 @@ namespace Bluemesa\Bundle\CrudBundle\EventListener;
 use Bluemesa\Bundle\AclBundle\Filter\SecureFilterInterface;
 use Bluemesa\Bundle\CoreBundle\Repository\FilteredRepositoryInterface;
 use Bluemesa\Bundle\CrudBundle\Controller\Annotations\Filter;
+use Bluemesa\Bundle\CrudBundle\Event\CrudControllerEvents;
 use Bluemesa\Bundle\CrudBundle\Event\IndexActionEvent;
 use Bluemesa\Bundle\CrudBundle\Filter\RedirectFilterInterface;
 use Doctrine\Common\Annotations\Reader;
 use FOS\RestBundle\View\View;
 use JMS\DiExtraBundle\Annotation as DI;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
@@ -30,24 +32,11 @@ use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
  * The CrudFilterListener handles Filter annotation for controllers.
  *
  * @DI\Service("bluemesa.crud.listener.filter")
- * @DI\Tag("kernel.event_listener",
- *     attributes = {
- *         "event" = "bluemesa.controller.index_initialize",
- *         "method" = "onIndexInitialize",
- *         "priority" = 900
- *     }
- * )
- * @DI\Tag("kernel.event_listener",
- *     attributes = {
- *         "event" = "bluemesa.controller.index_completed",
- *         "method" = "onIndexCompleted",
- *         "priority" = 100
- *     }
- * )
+ * @DI\Tag("kernel.event_subscriber")
  *
  * @author Radoslaw Kamil Ejsmont <radoslaw@ejsmont.net>
  */
-class CrudFilterListener
+class CrudFilterListener implements EventSubscriberInterface
 {
     /**
      * @var Reader
@@ -84,6 +73,17 @@ class CrudFilterListener
         $this->reader = $reader;
         $this->authorizationChecker = $authorizationChecker;
         $this->tokenStorage = $tokenStorage;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public static function getSubscribedEvents()
+    {
+        return array(
+            CrudControllerEvents::INDEX_INITIALIZE => array('onIndexInitialize', 900),
+            CrudControllerEvents::INDEX_COMPLETED => array('onIndexCompleted', 100)
+        );
     }
 
     /**

@@ -13,43 +13,31 @@
 namespace Bluemesa\Bundle\CrudBundle\EventListener;
 
 use Bluemesa\Bundle\CoreBundle\Entity\MutableIdEntityInterface;
-use Bluemesa\Bundle\CrudBundle\Event\EditActionEvent;
+use Bluemesa\Bundle\CrudBundle\Event\CrudControllerEvents;
 use Bluemesa\Bundle\CrudBundle\Event\EntityModificationEvent;
-use Bluemesa\Bundle\CrudBundle\Event\NewActionEvent;
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Id\AssignedGenerator;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use JMS\DiExtraBundle\Annotation as DI;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 
 /**
  * The CrudAnnotationListener handles Pagination annotation for controllers.
  *
  * @DI\Service("bluemesa.crud.listener.mutable_id")
- * @DI\Tag("kernel.event_listener",
- *     attributes = {
- *         "event" = "bluemesa.controller.edit_submitted",
- *         "method" = "onMutableId",
- *         "priority" = 1000
- *     }
- * )
- * @DI\Tag("kernel.event_listener",
- *     attributes = {
- *         "event" = "bluemesa.controller.new_submitted",
- *         "method" = "onMutableId",
- *         "priority" = 1000
- *     }
- * )
+ * @DI\Tag("kernel.event_subscriber")
  *
  * @author Radoslaw Kamil Ejsmont <radoslaw@ejsmont.net>
  */
-class CrudMutableIdListener
+class CrudMutableIdListener implements EventSubscriberInterface
 {
     /**
      * @var ManagerRegistry
      */
     protected $doctrine;
+
 
     /**
      * Constructor.
@@ -65,11 +53,21 @@ class CrudMutableIdListener
         $this->doctrine = $doctrine;
     }
 
+    /**
+     * @inheritDoc
+     */
+    public static function getSubscribedEvents()
+    {
+        return array(
+            CrudControllerEvents::NEW_SUBMITTED => array('setMutableId', 1000),
+            CrudControllerEvents::EDIT_SUBMITTED => array('setMutableId', 1000)
+        );
+    }
 
     /**
      * @param EntityModificationEvent $event
      */
-    public function onMutableId(EntityModificationEvent $event)
+    public function setMutableId(EntityModificationEvent $event)
     {
         $request = $event->getRequest();
         $entity = $event->getEntity();

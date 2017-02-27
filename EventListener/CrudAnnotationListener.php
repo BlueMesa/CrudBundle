@@ -114,7 +114,7 @@ class CrudAnnotationListener
             $configurations['entity'] = $configuration;
             $this->manager->apply($request, $configurations);
         }
-        $name = $this->getEntityName($controllerAnnotation, $c);
+        $name = $this->getEntityName($controllerAnnotation, $class);
         $this->addRequestAttribute($request, 'entity_class', $class);
         $this->addRequestAttribute($request, 'entity_name', $name);
 
@@ -145,7 +145,8 @@ class CrudAnnotationListener
     {
         $class = $controllerAnnotation->getEntityClass();
         if (null === $class) {
-            $name = $this->getEntityName($controllerAnnotation, $c);
+            $controller = $c->getShortName();
+            $name = str_replace("Controller", "", $controller);
             $class = preg_replace('/[\s_]+/', '', $name);
         }
         if (! class_exists($class)) {
@@ -162,15 +163,20 @@ class CrudAnnotationListener
         return $class;
     }
 
-    private function getEntityName(Controller $controllerAnnotation, \ReflectionClass $c)
+    /**
+     * @param Controller $controllerAnnotation
+     * @param $class
+     * @return string
+     */
+    private function getEntityName(Controller $controllerAnnotation, $class)
     {
         $name = $controllerAnnotation->getEntityName();
         if (null === $name) {
-            $controller = $c->getShortName();
-            $name = str_replace("Controller", "", $controller);
+            $e = new \ReflectionClass($class);
+            $name = preg_replace(array('/(?<=[^A-Z])([A-Z])/', '/(?<=[^0-9])([0-9])/'), ' $0', $e->getShortName());
         }
 
-        return $name;
+        return strtolower($name);
     }
 
     /**
@@ -214,7 +220,7 @@ class CrudAnnotationListener
             }
         }
         if (! class_exists($type)) {
-            $message  = "Connot find form ";
+            $message  = "Cannot find form ";
             $message .= $type;
             $message .= ". Please specify the form FQCN using form_type parameter.";
             throw new \LogicException($message);
