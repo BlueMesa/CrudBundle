@@ -13,8 +13,8 @@
 namespace Bluemesa\Bundle\CrudBundle\Request;
 
 
-use Bluemesa\Bundle\CoreBundle\Doctrine\ObjectManagerRegistry;
 use Bluemesa\Bundle\CoreBundle\Entity\Entity;
+use Bluemesa\Bundle\CoreBundle\Request\AbstractHandler;
 use Bluemesa\Bundle\CrudBundle\Event\CrudControllerEvents;
 use Bluemesa\Bundle\CrudBundle\Event\DeleteActionEvent;
 use Bluemesa\Bundle\CrudBundle\Event\EditActionEvent;
@@ -23,11 +23,8 @@ use Bluemesa\Bundle\CrudBundle\Event\NewActionEvent;
 use Bluemesa\Bundle\CrudBundle\Event\ShowActionEvent;
 use FOS\RestBundle\View\View;
 use JMS\DiExtraBundle\Annotation as DI;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Form\FormInterface;
-use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Routing\RouterInterface;
 
 /**
  * Class CrudHandler
@@ -37,55 +34,8 @@ use Symfony\Component\Routing\RouterInterface;
  * @package Bluemesa\Bundle\CrudBundle\Request
  * @author Radoslaw Kamil Ejsmont <radoslaw@ejsmont.net>
  */
-class CrudHandler
+class CrudHandler extends AbstractHandler
 {
-    /**
-     * @var EventDispatcherInterface
-     */
-    protected $dispatcher;
-
-    /**
-     * @var ObjectManagerRegistry
-     */
-    protected $registry;
-
-    /**
-     * @var FormFactoryInterface
-     */
-    protected $factory;
-
-    /**
-     * @var RouterInterface
-     */
-    protected $router;
-
-
-    /**
-     * CrudHandler constructor.
-     *
-     * @DI\InjectParams({
-     *     "dispatcher" = @DI\Inject("event_dispatcher"),
-     *     "registry" = @DI\Inject("bluemesa.core.doctrine.registry"),
-     *     "factory" = @DI\Inject("form.factory"),
-     *     "router" = @DI\Inject("router")
-     * })
-     *
-     * @param EventDispatcherInterface  $dispatcher
-     * @param ObjectManagerRegistry     $registry
-     * @param FormFactoryInterface      $factory
-     * @param RouterInterface           $router
-     */
-    public function __construct(EventDispatcherInterface $dispatcher,
-                                ObjectManagerRegistry $registry,
-                                FormFactoryInterface $factory,
-                                RouterInterface $router)
-    {
-        $this->dispatcher = $dispatcher;
-        $this->registry = $registry;
-        $this->factory = $factory;
-        $this->router = $router;
-    }
-
     /**
      * This method calls a proper handler for the incoming request
      *

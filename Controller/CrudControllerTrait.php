@@ -23,12 +23,10 @@ trait CrudControllerTrait
      */
     public function getCrudHandler()
     {
-        /** @var ContainerInterface $container */
-        $container = $this->container;
+        if ((! property_exists($this, 'container'))||(! $this->container instanceof ContainerInterface)) {
+            throw new \LogicException("Calling class must have container property set to ContainerInterface instance");
+        }
 
-        /** @var CrudHandler $handler */
-        $handler = $container->get('bluemesa.crud.handler');
-
-        return $handler;
+        return $this->container->get('bluemesa.crud.handler');
     }
 }

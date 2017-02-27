@@ -76,7 +76,7 @@ class CrudAnnotationListener
     }
 
     /**
-     * Modifies the ParamConverterManager instance.
+     * Adds CRUD parameters to the Request object.
      *
      * @param FilterControllerEvent $event A FilterControllerEvent instance
      */
@@ -100,12 +100,12 @@ class CrudAnnotationListener
         $controllerAnnotation = $this->reader->getClassAnnotation($c, Controller::class);
         /** @var Action $actionAnnotation */
         $actionAnnotation = $this->reader->getMethodAnnotation($m, Action::class);
-        if (! $controllerAnnotation || ! $actionAnnotation) {
+
+        if (! $controllerAnnotation) {
             return;
         }
 
         $class = $this->getEntityClass($controllerAnnotation, $c);
-
         if ((! $request->attributes->has('entity'))&&($request->attributes->has('id'))) {
             $configurations = array();
             $configuration = new ParamConverter(array());
@@ -114,16 +114,19 @@ class CrudAnnotationListener
             $configurations['entity'] = $configuration;
             $this->manager->apply($request, $configurations);
         }
-
         $name = $this->getEntityName($controllerAnnotation, $c);
+        $this->addRequestAttribute($request, 'entity_class', $class);
+        $this->addRequestAttribute($request, 'entity_name', $name);
+
+        if (! $actionAnnotation) {
+            return;
+        }
+
         $action = $this->getActionName($actionAnnotation, $m);
         $type = $this->getFormType($actionAnnotation, $controllerAnnotation, $class);
         $editRedirect = $this->getEditRedirectRoute($actionAnnotation, $controllerAnnotation, $request, $c);
         $deleteRedirect = $this->getDeleteRedirectRoute($actionAnnotation, $controllerAnnotation, $request, $c);
         $delete = $this->getDeleteRoute($actionAnnotation, $controllerAnnotation, $request, $c);
-
-        $this->addRequestAttribute($request, 'entity_class', $class);
-        $this->addRequestAttribute($request, 'entity_name', $name);
         $this->addRequestAttribute($request, 'crud_action', $action);
         $this->addRequestAttribute($request, 'form_type', $type);
         $this->addRequestAttribute($request, 'edit_redirect_route', $editRedirect);
