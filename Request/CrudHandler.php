@@ -148,7 +148,7 @@ class CrudHandler extends AbstractHandler
             $this->dispatcher->dispatch(CrudControllerEvents::NEW_SUCCESS, $event);
 
             if (null === $view = $event->getView()) {
-                $view = View::createRouteRedirect($this->getRedirectRoute($request));
+                $view = View::createRouteRedirect($this->getRedirectRoute($request), array('id' => $entity->getId()));
             }
 
         } else {
@@ -217,7 +217,7 @@ class CrudHandler extends AbstractHandler
             $this->dispatcher->dispatch(CrudControllerEvents::EDIT_SUCCESS, $event);
 
             if (null === $view = $event->getView()) {
-                $view = View::createRouteRedirect($this->getRedirectRoute($request));
+                $view = View::createRouteRedirect($this->getRedirectRoute($request), array('id' => $entity->getId()));
             }
 
         } else {

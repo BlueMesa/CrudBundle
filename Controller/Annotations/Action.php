@@ -37,7 +37,7 @@ class Action extends BaseAction
     public function __construct(array $values)
     {
         parent::__construct($values);
-        $this->form = $values['form'];
+        $this->form = array_key_exists('form', $values) ? $values['form'] : null;
     }
 
     /**
