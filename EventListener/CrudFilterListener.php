@@ -13,6 +13,7 @@
 namespace Bluemesa\Bundle\CrudBundle\EventListener;
 
 use Bluemesa\Bundle\AclBundle\Filter\SecureFilterInterface;
+use Bluemesa\Bundle\CoreBundle\EventListener\AttributeGeneratorTrait;
 use Bluemesa\Bundle\CoreBundle\Repository\FilteredRepositoryInterface;
 use Bluemesa\Bundle\CrudBundle\Controller\Annotations\Filter;
 use Bluemesa\Bundle\CrudBundle\Event\CrudControllerEvents;
@@ -38,6 +39,8 @@ use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
  */
 class CrudFilterListener implements EventSubscriberInterface
 {
+    use AttributeGeneratorTrait;
+
     /**
      * @var Reader
      */
@@ -112,11 +115,9 @@ class CrudFilterListener implements EventSubscriberInterface
 
         $repository = $event->getRepository();
         if ($repository instanceof FilteredRepositoryInterface) {
-            if ($filterClass instanceof SecureFilterInterface) {
-                $filter = new $filterClass($request, $this->authorizationChecker, $this->tokenStorage);
-            } else {
-                $filter = new $filterClass($request);
-            }
+            $filter = is_a($filterClass, SecureFilterInterface::class, true) ?
+                new $filterClass($request, $this->authorizationChecker, $this->tokenStorage) :
+                new $filterClass($request);
 
             /* Redirect to route that handles submitted filter parameters if needed */
             if (($filter instanceof RedirectFilterInterface)&&(!empty($redirectRoute))&&($filter->needRedirect())) {
@@ -153,17 +154,5 @@ class CrudFilterListener implements EventSubscriberInterface
     private function getController($request)
     {
         return explode("::", $request->get('_controller'));
-    }
-
-    /**
-     * @param Request $request
-     * @param string  $attribute
-     * @param string  $value
-     */
-    private function addRequestAttribute(Request $request, $attribute, $value)
-    {
-        if (! $request->attributes->has($attribute)) {
-            $request->attributes->set($attribute, $value);
-        }
     }
 }

@@ -14,6 +14,7 @@ namespace Bluemesa\Bundle\CrudBundle\Request;
 
 
 use Bluemesa\Bundle\CoreBundle\Entity\Entity;
+use Bluemesa\Bundle\CoreBundle\EventListener\RoutePrefixTrait;
 use Bluemesa\Bundle\CoreBundle\Request\AbstractHandler;
 use Bluemesa\Bundle\CrudBundle\Event\CrudControllerEvents;
 use Bluemesa\Bundle\CrudBundle\Event\DeleteActionEvent;
@@ -36,6 +37,8 @@ use Symfony\Component\HttpFoundation\Request;
  */
 class CrudHandler extends AbstractHandler
 {
+    use RoutePrefixTrait;
+
     /**
      * This method calls a proper handler for the incoming request
      *
@@ -46,7 +49,7 @@ class CrudHandler extends AbstractHandler
      */
     public function handle(Request $request)
     {
-        $action = $request->get('crud_action');
+        $action = $request->get('action');
         switch($action) {
             case 'index':
                 $result = $this->handleIndexAction($request);
@@ -118,12 +121,11 @@ class CrudHandler extends AbstractHandler
      */
     public function handleNewAction(Request $request)
     {
-        $type = $request->get('form_type');
         $entityClass = $request->get('entity_class');
 
         /** @var Entity $entity */
         $entity = new $entityClass();
-        $form = $this->factory->create($type, $entity, array('method' => 'PUT'));
+        $form = $this->createEntityForm($request, $entity);
 
         $event = new NewActionEvent($request, $entity, $form);
         $this->dispatcher->dispatch(CrudControllerEvents::NEW_INITIALIZE, $event);
@@ -146,8 +148,7 @@ class CrudHandler extends AbstractHandler
             $this->dispatcher->dispatch(CrudControllerEvents::NEW_SUCCESS, $event);
 
             if (null === $view = $event->getView()) {
-                $route = $request->get('edit_redirect_route');
-                $view = View::createRouteRedirect($route, array('id' => $entity->getId()));
+                $view = View::createRouteRedirect($this->getRedirectRoute($request));
             }
 
         } else {
@@ -170,13 +171,11 @@ class CrudHandler extends AbstractHandler
     public function handleShowAction(Request $request)
     {
         $entity = $request->get('entity');
-        $deleteForm = $this->createDeleteForm($request);
-
         $event = new ShowActionEvent($request, $entity);
         $this->dispatcher->dispatch(CrudControllerEvents::SHOW_INITIALIZE, $event);
 
         if (null === $view = $event->getView()) {
-            $view = View::create(array('entity' => $entity, 'delete_form' => $deleteForm->createView()));
+            $view = View::create(array('entity' => $entity));
         }
 
         $event = new ShowActionEvent($request, $entity, $view);
@@ -196,10 +195,7 @@ class CrudHandler extends AbstractHandler
     {
         /** @var Entity $entity */
         $entity = $request->get('entity');
-        $type = $request->get('form_type');
-        $form = $this->factory->create($type, $entity);
-        $deleteForm = $this->createDeleteForm($request);
-
+        $form = $this->createEntityForm($request, $entity, array('method' => 'PUT'));
         $event = new EditActionEvent($request, $entity, $form);
         $this->dispatcher->dispatch(CrudControllerEvents::EDIT_INITIALIZE, $event);
 
@@ -221,13 +217,11 @@ class CrudHandler extends AbstractHandler
             $this->dispatcher->dispatch(CrudControllerEvents::EDIT_SUCCESS, $event);
 
             if (null === $view = $event->getView()) {
-                $route = $request->get('edit_redirect_route');
-                $view = View::createRouteRedirect($route, array('id' => $entity->getId()));
+                $view = View::createRouteRedirect($this->getRedirectRoute($request));
             }
 
         } else {
-            $view = View::create(array('entity' => $entity, 'form' => $form->createView(),
-                'delete_form' => $deleteForm->createView()));
+            $view = View::create(array('entity' => $entity, 'form' => $form->createView()));
         }
 
         $event = new EditActionEvent($request, $entity, $form, $view);
@@ -248,7 +242,7 @@ class CrudHandler extends AbstractHandler
     {
         /** @var Entity $entity */
         $entity = $request->get('entity');
-        $form = $this->createDeleteForm($request);
+        $form = $this->createDeleteForm();
 
         $event = new DeleteActionEvent($request, $entity, $form);
         $this->dispatcher->dispatch(CrudControllerEvents::DELETE_INITIALIZE, $event);
@@ -259,7 +253,9 @@ class CrudHandler extends AbstractHandler
 
         $form->handleRequest($request);
 
-        if ($form->isSubmitted() && $form->isValid()) {
+        if (($form->isSubmitted() && $form->isValid()) ||
+            ($request->isMethod('GET') && ($request->get('delete') == 'confirm'))) {
+
             $event = new DeleteActionEvent($request, $entity, $form);
             $this->dispatcher->dispatch(CrudControllerEvents::DELETE_SUBMITTED, $event);
 
@@ -271,8 +267,7 @@ class CrudHandler extends AbstractHandler
             $this->dispatcher->dispatch(CrudControllerEvents::DELETE_SUCCESS, $event);
 
             if (null === $view = $event->getView()) {
-                $route = $request->get('delete_redirect_route');
-                $view = View::createRouteRedirect($route);
+                $view = View::createRouteRedirect($this->getRedirectRoute($request));
             }
 
         } else {
@@ -288,19 +283,59 @@ class CrudHandler extends AbstractHandler
     /**
      * Creates a form to delete an entity.
      *
-     * @param Request $request
-     *
      * @return FormInterface
      */
-    private function createDeleteForm(Request $request)
+    private function createDeleteForm()
     {
-        /** @var Entity $entity */
-        $entity = $request->get('entity');
-        $url = $this->router->generate($request->get('delete_route'), array('id' => $entity->getId()));
-
         return $this->factory->createBuilder()
-            ->setAction($url)
             ->setMethod('DELETE')
             ->getForm();
+    }
+
+    /**
+     * Creates a form to edit an entity.
+     *
+     * @param  Request $request
+     * @param  Entity  $entity
+     * @param  array   $options
+     * @return FormInterface
+     */
+    private function createEntityForm(Request $request, Entity $entity, $options = array())
+    {
+        $type = $request->get('form_type');
+        if (null === $type) {
+            $type = str_replace("\\Entity\\", "\\Form\\", $request->get('entity_class')) . "Type";
+        }
+
+        if (! class_exists($type)) {
+            $message  = "Cannot find form ";
+            $message .= $type;
+            $message .= ". Please specify the form FQCN using form_type request attribute.";
+            throw new \LogicException($message);
+        }
+
+        return $this->factory->create($type, $entity, $options);
+    }
+
+    /**
+     * @param  Request $request
+     * @return string
+     */
+    private function getRedirectRoute(Request $request)
+    {
+        $route = $request->get('redirect');
+        if (null === $route) {
+            switch($request->get('action')) {
+                case 'new':
+                case 'edit':
+                    $route = $this->getPrefix($request) . 'show';
+                    break;
+                case 'delete':
+                    $route = $this->getPrefix($request) . 'index';
+                    break;
+            }
+        }
+
+        return $route;
     }
 }

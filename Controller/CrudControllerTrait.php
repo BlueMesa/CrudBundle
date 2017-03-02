@@ -23,7 +23,7 @@ trait CrudControllerTrait
      */
     public function getCrudHandler()
     {
-        if ((! property_exists($this, 'container'))||(! $this->container instanceof ContainerInterface)) {
+        if (! $this->container instanceof ContainerInterface) {
             throw new \LogicException("Calling class must have container property set to ContainerInterface instance");
         }
 

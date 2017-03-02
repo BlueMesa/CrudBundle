@@ -12,6 +12,7 @@
 
 namespace Bluemesa\Bundle\CrudBundle\Controller\Annotations;
 
+use Bluemesa\Bundle\CoreBundle\Controller\Annotations\Action as BaseAction;
 
 /**
  * Action Annotation
@@ -21,46 +22,22 @@ namespace Bluemesa\Bundle\CrudBundle\Controller\Annotations;
  *
  * @author Radoslaw Kamil Ejsmont <radoslaw@ejsmont.net>
  */
-class Action
+class Action extends BaseAction
 {
     /**
      * @var string
      */
-    public $name;
-
-    /**
-     * @var string
-     */
-    public $form_type;
-
-    /**
-     * @var string
-     */
-    public $redirect_route;
-
-    /**
-     * @var string
-     */
-    public $delete_route;
+    private $form;
 
 
     /**
      * Action Annotation constructor.
+     * @param array $values
      */
-    public function __construct()
+    public function __construct(array $values)
     {
-        $this->name = null;
-        $this->form_type = null;
-        $this->redirect_route = null;
-        $this->delete_route = null;
-    }
-
-    /**
-     * @return string
-     */
-    public function getAction()
-    {
-        return $this->name;
+        parent::__construct($values);
+        $this->form = $values['form'];
     }
 
     /**
@@ -68,22 +45,6 @@ class Action
      */
     public function getFormType()
     {
-        return $this->form_type;
-    }
-
-    /**
-     * @return string
-     */
-    public function getRedirectRoute()
-    {
-        return $this->redirect_route;
-    }
-
-    /**
-     * @return string
-     */
-    public function getDeleteRoute()
-    {
-        return $this->delete_route;
+        return $this->form;
     }
 }

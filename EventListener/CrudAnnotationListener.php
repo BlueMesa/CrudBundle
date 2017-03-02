@@ -11,17 +11,15 @@
 
 namespace Bluemesa\Bundle\CrudBundle\EventListener;
 
+use Bluemesa\Bundle\CoreBundle\EventListener\AttributeGeneratorTrait;
 use Bluemesa\Bundle\CrudBundle\Controller\Annotations\Action;
 use Bluemesa\Bundle\CrudBundle\Controller\Annotations\Controller;
 use Doctrine\Common\Annotations\Reader;
 use Doctrine\Common\Util\ClassUtils;
-use FOS\RestBundle\Controller\Annotations\NamePrefix;
 use JMS\DiExtraBundle\Annotation as DI;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Sensio\Bundle\FrameworkExtraBundle\Request\ParamConverter\ParamConverterManager;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\FilterControllerEvent;
-use Symfony\Component\Routing\Exception\RouteNotFoundException;
 use Symfony\Component\Routing\RouterInterface;
 
 /**
@@ -40,6 +38,8 @@ use Symfony\Component\Routing\RouterInterface;
  */
 class CrudAnnotationListener
 {
+    use AttributeGeneratorTrait;
+
     /**
      * @var ParamConverterManager
      */
@@ -122,16 +122,8 @@ class CrudAnnotationListener
             return;
         }
 
-        $action = $this->getActionName($actionAnnotation, $m);
-        $type = $this->getFormType($actionAnnotation, $controllerAnnotation, $class);
-        $editRedirect = $this->getEditRedirectRoute($actionAnnotation, $controllerAnnotation, $request, $c);
-        $deleteRedirect = $this->getDeleteRedirectRoute($actionAnnotation, $controllerAnnotation, $request, $c);
-        $delete = $this->getDeleteRoute($actionAnnotation, $controllerAnnotation, $request, $c);
-        $this->addRequestAttribute($request, 'crud_action', $action);
+        $type = $this->getFormType($actionAnnotation, $controllerAnnotation);
         $this->addRequestAttribute($request, 'form_type', $type);
-        $this->addRequestAttribute($request, 'edit_redirect_route', $editRedirect);
-        $this->addRequestAttribute($request, 'delete_redirect_route', $deleteRedirect);
-        $this->addRequestAttribute($request, 'delete_route', $delete);
     }
 
     /**
@@ -180,161 +172,18 @@ class CrudAnnotationListener
     }
 
     /**
-     * @param Action $actionAnnotation
-     * @param \ReflectionMethod $m
-     *
-     * @return string
-     * @throws \LogicException
-     */
-    private function getActionName(Action $actionAnnotation, \ReflectionMethod $m)
-    {
-        $action = $actionAnnotation->getAction();
-        if (null === $action) {
-            $method = $m->getName();
-            $action = str_replace("Action", "", $method);
-        }
-        if (! in_array($action, array('index', 'show', 'new', 'edit', 'delete'))) {
-            $message  = "The action '" . $action;
-            $message .= "' is not one of the allowed CRUD actions ('index', 'show', 'new', 'edit', 'delete').";
-            throw new \LogicException($message);
-        }
-
-        return $action;
-    }
-
-    /**
      * @param Controller    $controllerAnnotation
      * @param Action        $actionAnnotation
-     * @param $entityClass
-     *
      * @return string
      * @throws \LogicException
      */
-    private function getFormType(Action $actionAnnotation, Controller $controllerAnnotation, $entityClass)
+    private function getFormType(Action $actionAnnotation, Controller $controllerAnnotation)
     {
         $type = $actionAnnotation->getFormType();
         if (null === $type) {
             $type = $controllerAnnotation->getFormType();
-            if (null === $type) {
-                $type = str_replace("\\Entity\\", "\\Form\\", $entityClass) . "Type";
-            }
-        }
-        if (! class_exists($type)) {
-            $message  = "Cannot find form ";
-            $message .= $type;
-            $message .= ". Please specify the form FQCN using form_type parameter.";
-            throw new \LogicException($message);
         }
 
         return $type;
-    }
-
-    /**
-     * @param Action            $actionAnnotation
-     * @param Controller        $controllerAnnotation
-     * @param Request           $request
-     * @param \ReflectionClass  $c
-     *
-     * @return string
-     */
-    private function getEditRedirectRoute(Action $actionAnnotation, Controller $controllerAnnotation,
-                                          Request $request, \ReflectionClass $c)
-    {
-        $route = $actionAnnotation->getRedirectRoute();
-        if (null === $route) {
-            $route = $controllerAnnotation->getEditRedirect();
-            if (null === $route) {
-                $route = $this->getRoutePrefix($c) . "show";
-            }
-        }
-
-        $this->verifyRouteExists($route);
-
-        return $route;
-    }
-
-    /**
-     * @param Action            $actionAnnotation
-     * @param Controller        $controllerAnnotation
-     * @param Request           $request
-     * @param \ReflectionClass  $c
-     *
-     * @return string
-     */
-    private function getDeleteRedirectRoute(Action $actionAnnotation, Controller $controllerAnnotation,
-                                          Request $request, \ReflectionClass $c)
-    {
-        $route = $actionAnnotation->getRedirectRoute();
-        if (null === $route) {
-            $route = $controllerAnnotation->getDeleteRedirect();
-            if (null === $route) {
-                $route = $this->getRoutePrefix($c) . "index";
-            }
-        }
-        $this->verifyRouteExists($route);
-
-        return $route;
-    }
-
-    /**
-     * @param Action            $actionAnnotation
-     * @param Controller        $controllerAnnotation
-     * @param Request           $request
-     * @param \ReflectionClass  $c
-     *
-     * @return string
-     */
-    private function getDeleteRoute(Action $actionAnnotation, Controller $controllerAnnotation,
-                                            Request $request, \ReflectionClass $c)
-    {
-        $route = $actionAnnotation->getDeleteRoute();
-        if (null === $route) {
-            $route = $controllerAnnotation->getDeleteRoute();
-            if (null === $route) {
-                $route = $this->getRoutePrefix($c) . "delete";
-            }
-        }
-        $this->verifyRouteExists($route);
-
-        return $route;
-    }
-
-    /**
-     * @param \ReflectionClass $c
-     *
-     * @return string
-     */
-    private function getRoutePrefix(\ReflectionClass $c)
-    {
-        /** @var NamePrefix $namePrefixAnnotation */
-        $namePrefixAnnotation = $this->reader->getClassAnnotation($c, NamePrefix::class);
-        return $namePrefixAnnotation->value;
-    }
-
-    /**
-     * @param  string                  $route
-     * @throws RouteNotFoundException
-     */
-    private function verifyRouteExists($route)
-    {
-        try {
-            $this->router->generate($route);
-        } catch (\Exception $e) {
-            if ($e instanceof RouteNotFoundException) {
-                throw $e;
-            }
-        }
-    }
-
-    /**
-     * @param Request $request
-     * @param string  $attribute
-     * @param string  $value
-     */
-    private function addRequestAttribute(Request $request, $attribute, $value)
-    {
-        if (! $request->attributes->has($attribute)) {
-            $request->attributes->set($attribute, $value);
-        }
     }
 }
