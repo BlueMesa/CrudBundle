@@ -16,9 +16,11 @@ namespace Bluemesa\Bundle\CrudBundle\Request;
 use Bluemesa\Bundle\CoreBundle\Entity\Entity;
 use Bluemesa\Bundle\CoreBundle\EventListener\RoutePrefixTrait;
 use Bluemesa\Bundle\CoreBundle\Request\AbstractHandler;
+use Bluemesa\Bundle\CoreBundle\Request\FormHandlerTrait;
 use Bluemesa\Bundle\CrudBundle\Event\CrudControllerEvents;
 use Bluemesa\Bundle\CrudBundle\Event\DeleteActionEvent;
 use Bluemesa\Bundle\CrudBundle\Event\EditActionEvent;
+use Bluemesa\Bundle\CrudBundle\Event\EntityEvent;
 use Bluemesa\Bundle\CrudBundle\Event\IndexActionEvent;
 use Bluemesa\Bundle\CrudBundle\Event\NewActionEvent;
 use Bluemesa\Bundle\CrudBundle\Event\ShowActionEvent;
@@ -38,6 +40,7 @@ use Symfony\Component\HttpFoundation\Request;
 class CrudHandler extends AbstractHandler
 {
     use RoutePrefixTrait;
+    use FormHandlerTrait;
 
     /**
      * This method calls a proper handler for the incoming request
@@ -113,55 +116,6 @@ class CrudHandler extends AbstractHandler
     }
 
     /**
-     * This method handles new action requests.
-     *
-     * @param Request $request
-     *
-     * @return View
-     */
-    public function handleNewAction(Request $request)
-    {
-        $entityClass = $request->get('entity_class');
-
-        /** @var Entity $entity */
-        $entity = new $entityClass();
-        $form = $this->createEntityForm($request, $entity);
-
-        $event = new NewActionEvent($request, $entity, $form);
-        $this->dispatcher->dispatch(CrudControllerEvents::NEW_INITIALIZE, $event);
-
-        if (null !== $event->getView()) {
-            return $event->getView();
-        }
-
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $event = new NewActionEvent($request, $entity, $form);
-            $this->dispatcher->dispatch(CrudControllerEvents::NEW_SUBMITTED, $event);
-
-            $em = $this->registry->getManagerForClass(get_class($entity));
-            $em->persist($entity);
-            $em->flush();
-
-            $event = new NewActionEvent($request, $entity, $form, $event->getView());
-            $this->dispatcher->dispatch(CrudControllerEvents::NEW_SUCCESS, $event);
-
-            if (null === $view = $event->getView()) {
-                $view = View::createRouteRedirect($this->getRedirectRoute($request), array('id' => $entity->getId()));
-            }
-
-        } else {
-            $view = View::create(array('entity' => $entity, 'form' => $form->createView()));
-        }
-
-        $event = new NewActionEvent($request, $entity, $form, $view);
-        $this->dispatcher->dispatch(CrudControllerEvents::NEW_COMPLETED, $event);
-
-        return $event->getView();
-    }
-
-    /**
      * This method handles show action requests.
      *
      * @param Request $request
@@ -185,6 +139,39 @@ class CrudHandler extends AbstractHandler
     }
 
     /**
+     * This method handles new action requests.
+     *
+     * @param Request $request
+     * @return View
+     */
+    public function handleNewAction(Request $request)
+    {
+        $registry = $this->registry;
+        $entityClass = $request->get('entity_class');
+        $entity = new $entityClass();
+        $form = $this->createEntityForm($request, $entity);
+
+        $events = array(
+            'class' => NewActionEvent::class,
+            'initialize' => CrudControllerEvents::NEW_INITIALIZE,
+            'submitted' => CrudControllerEvents::NEW_SUBMITTED,
+            'success' => CrudControllerEvents::NEW_SUCCESS,
+            'completed' => CrudControllerEvents::NEW_COMPLETED
+        );
+
+        $handler = function(Request $request, EntityEvent $event) use ($registry) {
+            $entity = $event->getEntity();
+            $em = $registry->getManagerForClass(get_class($entity));
+            $em->persist($entity);
+            $em->flush();
+
+            return $entity;
+        };
+
+        return $this->handleFormRequest($request, $entity, $form, $events, $handler);
+    }
+
+    /**
      * This method handles edit action requests.
      *
      * @param Request $request
@@ -193,43 +180,29 @@ class CrudHandler extends AbstractHandler
      */
     public function handleEditAction(Request $request)
     {
-        /** @var Entity $entity */
+        $registry = $this->registry;
         $entity = $request->get('entity');
         $form = $this->createEntityForm($request, $entity, array('method' => 'PUT'));
-        $event = new EditActionEvent($request, $entity, $form);
-        $this->dispatcher->dispatch(CrudControllerEvents::EDIT_INITIALIZE, $event);
 
-        if (null !== $event->getView()) {
-            return $event->getView();
-        }
+        $events = array(
+            'class' => EditActionEvent::class,
+            'initialize' => CrudControllerEvents::EDIT_INITIALIZE,
+            'submitted' => CrudControllerEvents::EDIT_SUBMITTED,
+            'success' => CrudControllerEvents::EDIT_SUCCESS,
+            'completed' => CrudControllerEvents::EDIT_COMPLETED
+        );
 
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $event = new EditActionEvent($request, $entity, $form);
-            $this->dispatcher->dispatch(CrudControllerEvents::EDIT_SUBMITTED, $event);
-
-            $em = $this->registry->getManagerForClass(get_class($entity));
+        $handler = function(Request $request, EntityEvent $event) use ($registry) {
+            $entity = $event->getEntity();
+            $em = $registry->getManagerForClass(get_class($entity));
             $em->persist($entity);
             $em->flush();
 
-            $event = new EditActionEvent($request, $entity, $form, $event->getView());
-            $this->dispatcher->dispatch(CrudControllerEvents::EDIT_SUCCESS, $event);
+            return $entity;
+        };
 
-            if (null === $view = $event->getView()) {
-                $view = View::createRouteRedirect($this->getRedirectRoute($request), array('id' => $entity->getId()));
-            }
-
-        } else {
-            $view = View::create(array('entity' => $entity, 'form' => $form->createView()));
-        }
-
-        $event = new EditActionEvent($request, $entity, $form, $view);
-        $this->dispatcher->dispatch(CrudControllerEvents::EDIT_COMPLETED, $event);
-
-        return $event->getView();
+        return $this->handleFormRequest($request, $entity, $form, $events, $handler);
     }
-
 
     /**
      * This method handles delete action requests.
@@ -240,44 +213,28 @@ class CrudHandler extends AbstractHandler
      */
     public function handleDeleteAction(Request $request)
     {
-        /** @var Entity $entity */
+        $registry = $this->registry;
         $entity = $request->get('entity');
         $form = $this->createDeleteForm();
 
-        $event = new DeleteActionEvent($request, $entity, $form);
-        $this->dispatcher->dispatch(CrudControllerEvents::DELETE_INITIALIZE, $event);
+        $events = array(
+            'class' => DeleteActionEvent::class,
+            'initialize' => CrudControllerEvents::DELETE_INITIALIZE,
+            'submitted' => CrudControllerEvents::DELETE_SUBMITTED,
+            'success' => CrudControllerEvents::DELETE_SUCCESS,
+            'completed' => CrudControllerEvents::DELETE_COMPLETED
+        );
 
-        if (null !== $event->getView()) {
-            return $event->getView();
-        }
-
-        $form->handleRequest($request);
-
-        if (($form->isSubmitted() && $form->isValid()) ||
-            ($request->isMethod('GET') && ($request->get('delete') == 'confirm'))) {
-
-            $event = new DeleteActionEvent($request, $entity, $form);
-            $this->dispatcher->dispatch(CrudControllerEvents::DELETE_SUBMITTED, $event);
-
-            $em = $this->registry->getManagerForClass(get_class($entity));
+        $handler = function(Request $request, EntityEvent $event) use ($registry) {
+            $entity = $event->getEntity();
+            $em = $registry->getManagerForClass(get_class($entity));
             $em->remove($entity);
             $em->flush();
 
-            $event = new DeleteActionEvent($request, $entity, $form);
-            $this->dispatcher->dispatch(CrudControllerEvents::DELETE_SUCCESS, $event);
+            return null;
+        };
 
-            if (null === $view = $event->getView()) {
-                $view = View::createRouteRedirect($this->getRedirectRoute($request));
-            }
-
-        } else {
-            $view = View::create(array('entity' => $entity, 'form' => $form->createView()));
-        }
-
-        $event = new DeleteActionEvent($request, $entity, $form, $view);
-        $this->dispatcher->dispatch(CrudControllerEvents::DELETE_COMPLETED, $event);
-
-        return $event->getView();
+        return $this->handleFormRequest($request, $entity, $form, $events, $handler);
     }
 
     /**
@@ -319,16 +276,19 @@ class CrudHandler extends AbstractHandler
 
     /**
      * @param  Request $request
+     * @param  mixed   $entity
      * @return string
      */
-    private function getRedirectRoute(Request $request)
+    protected function getRedirect(Request $request, $entity)
     {
         $route = $request->get('redirect');
+        $parameters = array();
         if (null === $route) {
             switch($request->get('action')) {
                 case 'new':
                 case 'edit':
                     $route = $this->getPrefix($request) . 'show';
+                    $parameters = array('id' => $entity->getId());
                     break;
                 case 'delete':
                     $route = $this->getPrefix($request) . 'index';
@@ -336,6 +296,6 @@ class CrudHandler extends AbstractHandler
             }
         }
 
-        return $route;
+        return array('route' => $route, 'parameters' => $parameters);
     }
 }

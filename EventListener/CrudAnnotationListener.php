@@ -34,6 +34,8 @@ use Symfony\Component\Routing\RouterInterface;
  *     }
  * )
  *
+ * TODO: Introduce controller variable cache
+ *
  * @author Radoslaw Kamil Ejsmont <radoslaw@ejsmont.net>
  */
 class CrudAnnotationListener
