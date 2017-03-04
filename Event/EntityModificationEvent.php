@@ -13,29 +13,11 @@
 namespace Bluemesa\Bundle\CrudBundle\Event;
 
 
+use Bluemesa\Bundle\CoreBundle\Event\FormEventInterface;
+use Bluemesa\Bundle\CoreBundle\Event\FormEventTrait;
 use Symfony\Component\Form\FormInterface;
 
-class EntityModificationEvent extends EntityEvent
+class EntityModificationEvent extends EntityEvent implements FormEventInterface
 {
-    /**
-     * @var FormInterface
-     */
-    protected $form;
-
-
-    /**
-     * @return FormInterface
-     */
-    public function getForm()
-    {
-        return $this->form;
-    }
-
-    /**
-     * @param FormInterface $form
-     */
-    public function setForm(FormInterface $form)
-    {
-        $this->form = $form;
-    }
+    use FormEventTrait;
 }
